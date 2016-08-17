@@ -1,7 +1,7 @@
 name: nlp-api
 path: server-nlp-api/
 host:
-  test: ec2-52-69-73-124.ap-northeast-1.compute.amazonaws.com
+  test: ec2-52-197-78-28.ap-northeast-1.compute.amazonaws.com
 
 bin:
   server: bin/server.js

@@ -6,6 +6,9 @@ var message = require('simple-message')
 var moment = require('moment')
 var path = require('path')
 var _ = require('lodash')
+var defaults = require('merge-defaults')
+var request = require('request')
+var qs = require('querystring')
 // var shortid = require('shortid')
 // var randomstring = require('randomstring')
 
@@ -15,7 +18,109 @@ var config = require(path.join(__dirname, '/../conf/config.json'))
  * @namespace api
  */
 var api = {
-  notifier: null
+  notifier: null,
+  token: {
+    access_token: null
+  }
+}
+
+api.request = function (opt, cb) {
+  if (typeof cb === 'undefined') {
+    cb = function (err, res) {
+      if (err) {
+        return console.log('error', err)
+      }
+
+      console.log('response', res)
+    }
+  }
+
+  if (opt.auth && api.token.access_token === null) {
+    return api.auth(opt.auth, function (err, result) {
+      if (err) {
+        return cb(err)
+      }
+
+      api.request(opt, cb)
+    })
+  }
+  var headers = {
+    'Content-Type': 'application/json',
+    'X-SNACKK-TZ-OFFSET': -540 // Asia/Seoul
+  }
+
+  if (api.token.access_token) {
+    headers['Authorization'] = 'Bearer ' + api.token.access_token
+  } else {
+    headers['X-SNACKK-CLIENT-ID'] = config.api.clientId
+    headers['X-SNACKK-CLIENT-SECRET'] = config.api.clientSecret
+  }
+  opt = defaults(opt || {}, {
+    method: 'GET',
+    headers: headers,
+    data: {}
+  })
+
+  var url = opt.url
+  if (typeof opt.param === 'object') {
+    _.each(opt.param, function (val, key) {
+      url = url.replace(':' + key, val)
+    })
+  }
+
+  var param = {
+    url: config.api.baseUrl + url,
+    method: opt.method,
+    headers: opt.headers,
+    strctSSL: false
+  }
+
+  if (param.method === 'GET') {
+    var data = _.reduce(opt.data, function (data, val, key) {
+      data[key] = typeof val === 'object' ? JSON.stringify(val) : val
+      return data
+    }, {})
+    param.url = [param.url, qs.stringify(data)].join('?')
+  } else {
+    param.body = opt.data
+    param.json = true
+  }
+
+  // debug
+  console.log('api.request ', param.method, param.url)
+
+  return request(param, function (err, res, body) {
+    if (err) {
+      return cb(err)
+    }
+
+    var result = typeof body === 'string' ? JSON.parse(body) : body
+    if (res.statusCode === 200) {
+      cb(null, result)
+    } else {
+      cb(result.error)
+    }
+  })
+}
+
+api.auth = function (auth, cb) {
+  this.request({
+    url: '/auth/authorize/tosq',
+    method: 'POST',
+    data: auth
+  }, function (err, result) {
+    if (err) {
+      return cb(err)
+    }
+
+    api.token.access_token = result.token.access_token
+
+    return cb(null, result)
+  })
+}
+
+api.logout = function () {
+  api.token.access_token = null
 }
 
 api.config = function (url) {

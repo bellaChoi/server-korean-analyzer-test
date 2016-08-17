@@ -15,7 +15,7 @@ var ctrl = {}
 
 ctrl.validator = {
   values: function (req, res, next) {
-    var values = req.query.values
+    var values = req.body.values
     if (typeof values === 'undefined' || typeof values[0] === 'undefined') {
       return api.error('common.missing_required_parameter', req, res)
     }
@@ -24,6 +24,15 @@ ctrl.validator = {
 }
 
 ctrl.extract = function (list, cb) {
+  // var cards = yield ctrl_card.list.bind(null, {
+  //   filter: {
+  //     pca_no: req.params.ca_no
+  //   }
+  // })
+
+  // cards = _.map(cards, function (item) {
+  //   return item.name
+  // })
   var nounList = {}
   _.forEach(list, function (value) {
     console.log(value)
